@@ -1,0 +1,14 @@
+{
+  "name": "kurscrm",
+  "version": "0.0.1",
+  "description": "my first socket.io app",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "mysql": "^2.18.1",
+    "node-fetch": "^2.6.1",
+    "requests": "^0.3.0",
+    "socket.io": "^2.3.0"
+  }
+}
