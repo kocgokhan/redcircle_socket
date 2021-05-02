@@ -36,7 +36,7 @@
 	var i;
 	var idds = "";
 
-	
+	var today, curdate;
 
 	Date.isLeapYear = function (year) {
 	  return (((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0));
@@ -62,6 +62,21 @@
 	  return this;
 	};
 
+	let unique = [];
+	const findDuplicates = (arr) => {
+	  let sorted_arr = arr.slice().sort(); // You can define the comparing function here. 
+	  // JS by default uses a crappy string compare.
+	  // (we use slice to clone the array so the
+	  // original array won't be modified)
+	  let results = [];
+	  for (let i = 0; i < sorted_arr.length - 1; i++) {
+	    if (sorted_arr[i + 1] == sorted_arr[i]) {
+	      results.push(sorted_arr[i]);
+	    }
+	  }
+	  return results;
+	}
+
 	var initial_result;
 	io.sockets.on('connection', function (socket) {
 	  console.log('Socket connected. ID: ' + socket.id);
@@ -69,13 +84,15 @@
 	    console.log('Refresh received from ID: ' + socket.id);
 	  });
 
+	  var toExactMinute = 60000 - (new Date().getTime() % 60000);
 	  var song_name = '';
 	  var song_artist = '';
 	  var song_uri = '';
 	  var song_image = '';
+		var matches = '';
 	  var current_date, dd, mm, yyyy, time;
-	  var today, curdate;
 
+	  var current_dates, dds, mms, yyyys, time, times, date1, date2, date3;
 
 	  socket.on("register", function (adminId) {
 	    console.log("Socket registered_admin: ", adminId);
@@ -120,7 +137,6 @@
 	                    song_artist = response.data['item']['album']['artists'][0]['name'];
 	                    console.log(song_name + ' - ' + song_artist);
 	                    socket.emit('event', song_name + ' - ' + song_artist);
-	                    socket.emit('current_song', song_name + ' - ' + song_artist + ' - ' + song_image + ' - ' + song_uri);
 
 
 	                    current_date = new Date()
@@ -137,56 +153,25 @@
 	                      // if any error while executing above query, throw error
 	                      if (err) throw err;
 	                      // if there is no error, you have the result
-	                      db.query("SELECT  a.user_id as one, b.user_id as two FROM user_song_preview a JOIN user_song_preview b ON a.song_uri = b.song_uri AND a.user_id != b.user_id  AND DATE_FORMAT(a.proccess_time, '%Y-%m-%d %H:%i') = DATE_FORMAT(b.proccess_time, '%Y-%m-%d %H:%i')   AND DATE_FORMAT(a.proccess_time, '%Y-%m-%d %H:%i')= DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i') AND DATE_FORMAT(b.proccess_time, '%Y-%m-%d %H:%i')= DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i')  ", function (err, rowse) {
-	                        if (err) throw err;
-	                        rowse.forEach(response_row => {
-
-
-	                          var para = [
-	                            [response_row['one'], response_row['two'], song_uri, song_image, song_name, song_artist, '0', today]
-	                          ];
-	                          db.query('SELECT * FROM user_match_song WHERE user_one=' + response_row['one'] + ' and user_two =' + response_row['two'], function (err, row) {
-
-
-	                            if (row && row.length) {
-
-	                              // do something with your row variable
-	                            } else {
-	                              //console.log('No case row was found :( !');
-									
-	                              db.query("INSERT INTO user_match_song (user_one, user_two,song_uri, song_image, song_name, song_artist,status,proccess_time) VALUES ?", [para], function (erro, rress, fieldss) {
-	                                // if any error while executing above query, throw error
-	                                if (erro) throw erro;
-									  
-									
-
-	                              });
-									
-									socket.emit('match_song','eşleşmen var kardeş !' );
-									
-	                            }
-
-	                          });
-
-
-	                        })
-	                      });
+							
 	                    });
+
+	                    
 
 
 	                  }
 
 	                }
 
-
+					
 	              }).catch(function (error) {
 	                //console.error(error);
 	              });
-
-
+					
+				
 	            }
-
-
+				
+	
 	          }).catch(function (error) {
 	            console.log('get_token', 'get token bro');
 	            socket.emit('get_token', 'get token bro');
@@ -198,12 +183,27 @@
 
 	    }, 10000);
 
+		  setInterval(function () {
 
+				db.query("SELECT *,DATE_FORMAT(proccess_time, '%Y-%m-%d %H:%i') as normal_date_one FROM user_song_preview where user_id!=" + adminId + " and DATE_FORMAT(proccess_time, '%Y-%m-%d %H:%i')= DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i')", function(err, resultssss) {
+					if(err) { throw new Error('Failed');}
+					console.log('diger id ler =>', resultssss['user_id']);
+
+				});
+
+				function Changed(pre, now) {
+			  // return true if pre != now
+				}
+
+
+			}, 1000); 
+		  
+		  
 	  });
 
 	  socket.on('disconnect', function () {
 	    console.log('Disconnect received from ID: ' + socket.id);
-	    const index = socketUsers.findIndex(socketUser => socketUser.socketId === socket.id,)
+	    const index = socketUsers.findIndex(socketUser => socketUser.socketId === socket.id)
 	    if (index === -1) {
 	      return;
 	    }
@@ -220,3 +220,50 @@
 	});
 
 
+	/*
+					db.query("SELECT *,DATE_FORMAT(proccess_time, '%Y-%m-%d %H:%i') as normal_date_one FROM user_song_preview where user_id="+ adminId +"  ",function(err,rowse){
+						if(err) throw err;
+							rowse.forEach(response_row=>{
+								
+								
+								db.query("SELECT *,DATE_FORMAT(proccess_time, '%Y-%m-%d %H:%i') as normal_date_two FROM user_song_preview where user_id!="+ adminId +" ",function(errs,rowses){
+								if(errs) throw errs;
+									rowses.forEach(response_two=>{
+																			
+										if(response_two['song_uri']==response_row['song_uri'] ){
+											//console.log(response_two['song_uri']+'--'+response_row['normal_date_one']+'--'+response_two['normal_date_two']);
+											
+											date1 = new Date(response_two['normal_date_two']);
+											date2 = new Date(response_row['normal_date_one']);
+									
+											current_dates = new Date()
+											dds = String(current_dates.getDate()).padStart(2, '0');
+											mms = String(current_dates.getMonth() + 1).padStart(2, '0'); //January is 0!
+											yyyys = current_dates.getFullYear();
+											times = current_dates.toLocaleTimeString('tr-TR');
+											curdate =   yyyys + '-'+ mms + '-' + dds + ' ' + times.slice(0, -3);
+											
+											
+											date3 = new Date(curdate);
+									
+											if(date1.valueOf() ==  date2.valueOf() ){
+											  
+												if( date2.valueOf() == date3.valueOf()){
+												  
+												    console.log('ok');
+											        socket.emit('match_song',response_two);
+													
+												}
+											}
+											
+										
+										}
+										
+										
+									})			     
+								});							
+								
+								
+							})			     
+						});
+	*/
